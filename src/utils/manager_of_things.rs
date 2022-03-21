@@ -1,51 +1,75 @@
 #[allow(unused_imports)]
 use std::sync::{Arc, Mutex, MutexGuard};
 
-/// Generates a "manager" for the given "thing". The "thing" is of type `$field_type`. The
+/// Generates a "manager" for the given "thing". The "thing" is of type `$thing_type`. The
 /// "manager" wraps it in a lock (`Mutex`), which is wrapped in an arc (`Arc`). One
 /// constraint is that the field type has to be `Default`.
 ///
+/// Nomenclature:
 /// - `$struct_name` = The name of the generated struct (the "manager").
-/// - `$field_name` = The name of the instance in the generated struct.
-/// - `$field_type` = The type of the instance in the generated struct.
+/// - `$thing_type` = The type of the instance in the generated struct.
+/// - `wrapped_thing` = The name of the property managed by the generated struct.
+/// - `locked_thing` = 🔒 Accessor gets `MutexGuard` to the "thing" (remember to drop it).
 #[macro_export]
-macro_rules! make_manager {
-  ($struct_name: ident manages { $field_name: ident: $field_type: ty } ) => {
+macro_rules! make_mutex_manager {
+  ($struct_name: ident manages $thing_type: ty ) => {
     #[derive(Debug)]
     struct $struct_name
     where
-      $field_type: Default,
+      $thing_type: Default,
     {
-      $field_name: Arc<Mutex<$field_type>>,
+      wrapped_thing: Arc<Mutex<$thing_type>>,
     }
 
     impl Default for $struct_name {
       fn default() -> Self {
         Self {
-          $field_name: Arc::new(Mutex::new(Default::default())),
+          wrapped_thing: Arc::new(Mutex::new(Default::default())),
         }
       }
     }
 
-    #[allow(dead_code)]
     impl $struct_name {
-      pub fn get_arc_clone(&self) -> Arc<Mutex<$field_type>> {
-        self.$field_name.clone()
-      }
-
-      pub fn set_field(
+      /// Directly mutate `wrapped_thing`.
+      pub fn set_value_of_wrapped_thing(
         &self,
-        value: $field_type,
+        value: $thing_type,
       ) {
-        *self.$field_name.lock().unwrap() = value;
+        *self.wrapped_thing.lock().unwrap() = value;
       }
 
-      pub fn get_field(&self) -> MutexGuard<$field_type> {
-        self.$field_name.lock().unwrap()
+      /// 🔒 Directly access `wrapped_thing`.
+      ///
+      /// Make sure to drop the `MutexGuard` that is returned when you're done w/ it to
+      /// prevent deadlock.
+      pub fn get_locked_thing(&self) -> MutexGuard<$thing_type> {
+        self.wrapped_thing.lock().unwrap()
       }
 
-      pub fn get_from_arc(my_arc: &Arc<Mutex<$field_type>>) -> MutexGuard<$field_type> {
+      /// Get a clone of the arc. This can be passed around safely, instead of passing the
+      /// manager instance itself.
+      pub fn get_arc(&self) -> Arc<Mutex<$thing_type>> {
+        self.wrapped_thing.clone()
+      }
+
+      /// 🔒 Static method that allow you to indirectly access the wrapped_thing via `Arc`
+      /// produced by `get_arc()`.
+      ///
+      /// Make sure to drop the `MutexGuard` that is returned when you're done w/ it to
+      /// prevent deadlock.
+      pub fn with_arc_get_locked_thing(
+        my_arc: &Arc<Mutex<$thing_type>>
+      ) -> MutexGuard<$thing_type> {
         my_arc.lock().unwrap()
+      }
+
+      /// Static method that allow you to indirectly mutate the wrapped_thing via `Arc`
+      /// produced by `get_arc()`.
+      pub fn with_arc_set_value_of_wrapped_thing(
+        my_arc: &Arc<Mutex<$thing_type>>,
+        value: $thing_type,
+      ) {
+        *my_arc.lock().unwrap() = value;
       }
     }
   };
