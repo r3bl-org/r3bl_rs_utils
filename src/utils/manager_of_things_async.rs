@@ -39,24 +39,6 @@ macro_rules! make_rwlock_manager_async {
         *self.wrapped_thing.write().await = value;
       }
 
-      /// 🔒 Directly access `wrapped_thing` as write-locked.
-      ///
-      /// Make sure to drop the `MutexGuard` that is returned when you're done w/ it to
-      /// prevent deadlock.
-      // pub async fn get_locked_thing(
-      //   &'static self
-      // ) -> RwLockWriteGuard<'static, $thing_type> {
-      //   self.wrapped_thing.write().await
-      // }
-
-      /// 🔒 Directly access `wrapped_thing` as read-locked.
-      ///
-      /// Make sure to drop the `MutexGuard` that is returned when you're done w/ it to
-      /// prevent deadlock.
-      // pub async fn get_locked_thing_r(&'_ self) -> RwLockReadGuard<'_, $thing_type> {
-      //   self.wrapped_thing.read().await
-      // }
-
       /// Get a clone of the arc. This can be passed around safely, instead of passing the
       /// manager instance itself.
       pub fn get_arc(&self) -> Arc<RwLock<$thing_type>> {
@@ -68,9 +50,9 @@ macro_rules! make_rwlock_manager_async {
       ///
       /// Make sure to drop the `MutexGuard` that is returned when you're done w/ it to
       /// prevent deadlock.
-      pub async fn with_arc_get_locked_thing(
-        my_arc: &'_ Arc<RwLock<$thing_type>>
-      ) -> RwLockWriteGuard<'_, $thing_type> {
+      pub async fn with_arc_get_locked_thing<'a>(
+        my_arc: &'a Arc<RwLock<$thing_type>>
+      ) -> RwLockWriteGuard<'a, $thing_type> {
         my_arc.write().await
       }
 
@@ -79,9 +61,9 @@ macro_rules! make_rwlock_manager_async {
       ///
       /// Make sure to drop the `MutexGuard` that is returned when you're done w/ it to
       /// prevent deadlock.
-      pub async fn with_arc_get_locked_thing_r(
-        my_arc: &'_ Arc<RwLock<$thing_type>>
-      ) -> RwLockReadGuard<'_, $thing_type> {
+      pub async fn with_arc_get_locked_thing_r<'a>(
+        my_arc: &'a Arc<RwLock<$thing_type>>
+      ) -> RwLockReadGuard<'a, $thing_type> {
         my_arc.read().await
       }
 

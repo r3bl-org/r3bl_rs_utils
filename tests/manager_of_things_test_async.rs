@@ -33,5 +33,4 @@ async fn test_make_manager_struct() {
     *ThingManager::with_arc_get_locked_thing_r(&arc_clone).await,
     13
   );
-
 }
